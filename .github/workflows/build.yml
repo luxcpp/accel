@@ -37,7 +37,7 @@ jobs:
       - name: Checkout lux-gpu
         uses: actions/checkout@v4
         with:
-          repository: luxcpp/gpu
+          repository: luxcpp/lux-gpu
           path: deps/lux-gpu
 
       - name: Install dependencies (Linux)
