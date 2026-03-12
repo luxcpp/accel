@@ -1,0 +1,9 @@
+/Users/z/work/luxcpp/install/lib/libluxaccel.0.1.0.dylib
+/Users/z/work/luxcpp/install/lib/libluxaccel.0.dylib
+/Users/z/work/luxcpp/install/lib/libluxaccel.dylib
+/Users/z/work/luxcpp/install/include/lux/accel/c_api.h
+/Users/z/work/luxcpp/install/include/lux/accel/backend_api.h
+/Users/z/work/luxcpp/install/lib/cmake/lux-accel/lux-accelTargets.cmake
+/Users/z/work/luxcpp/install/lib/cmake/lux-accel/lux-accelTargets-release.cmake
+/Users/z/work/luxcpp/install/lib/cmake/lux-accel/lux-accelConfig.cmake
+/Users/z/work/luxcpp/install/lib/cmake/lux-accel/lux-accelConfigVersion.cmake

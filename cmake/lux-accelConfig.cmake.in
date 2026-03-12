@@ -1,0 +1,5 @@
+@PACKAGE_INIT@
+# lux-accel is self-contained - no transitive dependencies
+# lux-gpu core is statically linked into liblux-accel
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+check_required_components("@PROJECT_NAME@")
