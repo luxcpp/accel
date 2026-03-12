@@ -18,15 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             arch: x86_64
             artifact: linux-x86_64
           - os: macos-14
             arch: arm64
             artifact: macos-arm64
-          - os: macos-13
-            arch: x86_64
-            artifact: macos-x86_64
           - os: windows-2022
             arch: x86_64
             artifact: windows-x86_64
@@ -65,8 +62,11 @@ jobs:
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
+        shell: bash
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install
+          cmake -B build -DCMAKE_BUILD_TYPE=Release \
+            "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/install" \
+            "-Dlux-gpu_DIR=${{ github.workspace }}/install/lib/cmake/lux-gpu"
 
       - name: Build
         run: cmake --build build --config Release
@@ -76,6 +76,7 @@ jobs:
           mkdir -p dist/lib dist/include
           cp build/liblux_accel* dist/lib/ 2>/dev/null || true
           cp build/libluxaccel* dist/lib/ 2>/dev/null || true
+          cp build/Release/luxaccel* dist/lib/ 2>/dev/null || true
           cp build/Release/lux_accel* dist/lib/ 2>/dev/null || true
           cp -r include/* dist/include/
           tar -czvf lux-accel-${{ matrix.artifact }}.tar.gz -C dist .
@@ -117,7 +118,6 @@ jobs:
           |----------|--------------|------|
           | Linux | x86_64 | `lux-accel-linux-x86_64.tar.gz` |
           | macOS | arm64 | `lux-accel-macos-arm64.tar.gz` |
-          | macOS | x86_64 | `lux-accel-macos-x86_64.tar.gz` |
           | Windows | x86_64 | `lux-accel-windows-x86_64.tar.gz` |
 
           ## Features
