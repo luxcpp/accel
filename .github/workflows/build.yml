@@ -64,9 +64,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
+          echo "=== Install directory contents ==="
+          find "${{ github.workspace }}/install" -name "*.cmake" 2>/dev/null || true
+          GPU_DIR=$(find "${{ github.workspace }}/install" -name "lux-gpuConfig.cmake" -exec dirname {} \; 2>/dev/null | head -1)
+          echo "Found lux-gpu cmake dir: $GPU_DIR"
           cmake -B build -DCMAKE_BUILD_TYPE=Release \
             "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/install" \
-            "-Dlux-gpu_DIR=${{ github.workspace }}/install/lib/cmake/lux-gpu"
+            ${GPU_DIR:+"-Dlux-gpu_DIR=$GPU_DIR"}
 
       - name: Build
         run: cmake --build build --config Release

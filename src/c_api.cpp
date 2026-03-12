@@ -6,6 +6,7 @@
 #include <lux/accel/backend_api.h>
 #include <lux/accel/accel.hpp>
 
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <string>
