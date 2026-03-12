@@ -7,6 +7,7 @@ on:
     tags: ['v*']
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 env:
   CMAKE_BUILD_TYPE: Release
@@ -36,7 +37,7 @@ jobs:
       - name: Checkout lux-gpu
         uses: actions/checkout@v4
         with:
-          repository: luxcpp/lux-gpu
+          repository: luxcpp/gpu
           path: deps/lux-gpu
 
       - name: Install dependencies (Linux)
@@ -72,7 +73,9 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist/lib dist/include
-          cp build/liblux_accel* dist/lib/ 2>/dev/null || cp build/Release/lux_accel* dist/lib/ 2>/dev/null || true
+          cp build/liblux_accel* dist/lib/ 2>/dev/null || true
+          cp build/libluxaccel* dist/lib/ 2>/dev/null || true
+          cp build/Release/lux_accel* dist/lib/ 2>/dev/null || true
           cp -r include/* dist/include/
           tar -czvf lux-accel-${{ matrix.artifact }}.tar.gz -C dist .
         shell: bash
