@@ -21,6 +21,10 @@ jobs:
           - os: ubuntu-24.04
             arch: x86_64
             artifact: linux-x86_64
+          - os: ubuntu-24.04
+            arch: arm64
+            artifact: linux-arm64
+            cross: true
           - os: macos-14
             arch: arm64
             artifact: macos-arm64
@@ -42,49 +46,101 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
 
+      - name: Install cross-compiler (Linux ARM64)
+        if: matrix.cross && runner.os == 'Linux'
+        run: sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: brew install cmake ninja
 
-      - name: Build lux-gpu dependency
+      # ---- Build lux-gpu dependency ----
+
+      - name: Build lux-gpu (Unix native)
+        if: runner.os != 'Windows' && !matrix.cross
         run: |
-          cmake -B deps/lux-gpu/build -S deps/lux-gpu -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          cmake -B deps/lux-gpu/build -S deps/lux-gpu \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
           cmake --build deps/lux-gpu/build --config Release
           cmake --install deps/lux-gpu/build --config Release
-        shell: bash
 
-      - name: Configure (Unix)
-        if: runner.os != 'Windows'
+      - name: Build lux-gpu (Linux ARM64 cross)
+        if: matrix.cross && runner.os == 'Linux'
+        run: |
+          cmake -B deps/lux-gpu/build -S deps/lux-gpu \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          cmake --build deps/lux-gpu/build --config Release
+          cmake --install deps/lux-gpu/build --config Release
+
+      - name: Build lux-gpu (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake -B deps/lux-gpu/build -S deps/lux-gpu `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}\install"
+          cmake --build deps/lux-gpu/build --config Release
+          cmake --install deps/lux-gpu/build --config Release --verbose
+
+      # ---- Configure lux-accel ----
+
+      - name: Configure (Unix native)
+        if: runner.os != 'Windows' && !matrix.cross
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install
 
+      - name: Configure (Linux ARM64 cross)
+        if: matrix.cross && runner.os == 'Linux'
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install
+
       - name: Configure (Windows)
         if: runner.os == 'Windows'
-        shell: bash
         run: |
-          echo "=== Install directory contents ==="
-          find "${{ github.workspace }}/install" -name "*.cmake" 2>/dev/null || true
-          GPU_DIR=$(find "${{ github.workspace }}/install" -name "lux-gpuConfig.cmake" -exec dirname {} \; 2>/dev/null | head -1)
-          echo "Found lux-gpu cmake dir: $GPU_DIR"
-          cmake -B build -DCMAKE_BUILD_TYPE=Release \
-            "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/install" \
-            ${GPU_DIR:+"-Dlux-gpu_DIR=$GPU_DIR"}
+          # List installed cmake config for debugging
+          Get-ChildItem -Path "${{ github.workspace }}\install" -Recurse -Filter "*.cmake" | ForEach-Object { Write-Host $_.FullName }
+          cmake -B build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}\install"
+
+      # ---- Build & Package ----
 
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Package
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
         run: |
           mkdir -p dist/lib dist/include
           cp build/liblux_accel* dist/lib/ 2>/dev/null || true
           cp build/libluxaccel* dist/lib/ 2>/dev/null || true
+          cp -r include/* dist/include/
+          tar -czvf lux-accel-${{ matrix.artifact }}.tar.gz -C dist .
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist/lib dist/include
           cp build/Release/luxaccel* dist/lib/ 2>/dev/null || true
           cp build/Release/lux_accel* dist/lib/ 2>/dev/null || true
           cp -r include/* dist/include/
           tar -czvf lux-accel-${{ matrix.artifact }}.tar.gz -C dist .
-        shell: bash
 
       - uses: actions/upload-artifact@v4
         with:
@@ -121,6 +177,7 @@ jobs:
           | Platform | Architecture | File |
           |----------|--------------|------|
           | Linux | x86_64 | `lux-accel-linux-x86_64.tar.gz` |
+          | Linux | arm64 | `lux-accel-linux-arm64.tar.gz` |
           | macOS | arm64 | `lux-accel-macos-arm64.tar.gz` |
           | Windows | x86_64 | `lux-accel-windows-x86_64.tar.gz` |
 
